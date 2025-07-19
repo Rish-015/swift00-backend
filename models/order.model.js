@@ -20,7 +20,11 @@ const orderSchema = new mongoose.Schema({
       name: String,
       price: Number,
       quantity: Number,
-      image: String
+      image: String,
+      delivered: {         // ✅ NEW FIELD
+        type: Boolean,
+        default: false
+      }
     }
   ],
   dispatchDetails: {
