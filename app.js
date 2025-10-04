@@ -49,9 +49,3 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
-
-// Start the server on 0.0.0.0 (all interfaces)
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
-});
