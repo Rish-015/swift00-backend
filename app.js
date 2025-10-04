@@ -13,8 +13,16 @@ const cartRoutes = require('./routes/cart.routes');
 
 const app = express();
 const path = require('path');
+const helmet = require('helmet');
+const compression = require('compression');
+const morgan = require('morgan');
 
 // Middleware
+app.set('trust proxy', 1); // if behind a proxy like Render
+app.use(helmet()); // security headers
+app.use(compression()); // gzip
+app.use(morgan('combined'));
+
 app.use(cors({
   origin: '*', // Allow all origins
   methods: ['GET', 'POST', 'PATCH', 'DELETE'], // 👈 This line is crucial
@@ -35,6 +43,9 @@ app.use('/images', express.static(path.join(__dirname, 'public/images')));
 app.get('/', (req, res) => {
   res.send('🎉 Backend is working fine!');
 });
+
+// Health check for platform
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // DB connection
 console.log("MONGODB_URI:", process.env.MONGODB_URI); // ✅ confirm it is not undefined
