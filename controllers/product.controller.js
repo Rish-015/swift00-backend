@@ -1,12 +1,15 @@
+
 const Product = require('../models/product.model'); // ✅ Ensure this is at the top
+const cloudinary = require('../cloudinary');
+const fs = require('fs');
 
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find();
-    const baseUrl = req.protocol + '://' + req.get('host');
     const mappedProducts = products.map(product => {
       const prod = product.toObject();
-      prod.imageUrl = prod.image ? baseUrl + prod.image : '';
+      // Always use Cloudinary URL directly
+      prod.imageUrl = prod.image || '';
       return prod;
     });
     res.json(mappedProducts);
@@ -23,16 +26,10 @@ const getProductById = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const baseUrl = req.protocol + '://' + req.get('host');
-
     const prod = product.toObject();
-
-    // ✅ Add image URL
-    prod.imageUrl = prod.image ? baseUrl + prod.image : '';
-
-    // ✅ Ensure stock is included in response
+    // Always use Cloudinary URL directly
+    prod.imageUrl = prod.image || '';
     prod.stock = product.stock;
-
     res.json(prod);
   } catch (error) {
     console.error("Error fetching product:", error);
@@ -44,16 +41,24 @@ const getProductById = async (req, res) => {
 const createProduct = async (req, res) => {
   try {
     const { name, price, description, stock } = req.body;
-    let imagePath = req.file ? `/images/${req.file.filename}` : '';
-    const product = new Product({ name, price, description, image: imagePath, stock });
+    let imageUrl = '';
+    if (req.file) {
+      // Upload to Cloudinary
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'products',
+      });
+      imageUrl = result.secure_url;
+      // Remove local file after upload
+      fs.unlinkSync(req.file.path);
+    }
+    const product = new Product({ name, price, description, image: imageUrl, stock });
     await product.save();
     // Add imageUrl to response
-    const baseUrl = req.protocol + '://' + req.get('host');
     const prod = product.toObject();
-    prod.imageUrl = prod.image ? baseUrl + prod.image : '';
+    prod.imageUrl = prod.image;
     res.status(201).json(prod);
   } catch (err) {
-    res.status(500).json({ message: 'Error creating product' });
+    res.status(500).json({ message: 'Error creating product', error: err.message });
   }
 };
 
@@ -63,7 +68,16 @@ const updateProduct = async (req, res) => {
   const { name, price, description, stock } = req.body;
   let updateFields = { name, price, description, stock };
   if (req.file) {
-    updateFields.image = `/images/${req.file.filename}`;
+    // Upload new image to Cloudinary
+    try {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'products',
+      });
+      updateFields.image = result.secure_url;
+      fs.unlinkSync(req.file.path);
+    } catch (err) {
+      return res.status(500).json({ message: 'Image upload failed', error: err.message });
+    }
   }
   try {
     const updated = await Product.findByIdAndUpdate(
@@ -72,10 +86,8 @@ const updateProduct = async (req, res) => {
       { new: true }
     );
     if (!updated) return res.status(404).json({ message: 'Product not found' });
-    // Add imageUrl to response
-    const baseUrl = req.protocol + '://' + req.get('host');
     const prod = updated.toObject();
-    prod.imageUrl = prod.image ? baseUrl + prod.image : '';
+    prod.imageUrl = prod.image || '';
     res.json(prod);
   } catch (error) {
     res.status(500).json({ message: 'Server error while updating product' });

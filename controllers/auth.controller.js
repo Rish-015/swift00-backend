@@ -109,9 +109,38 @@ const deleteAccount = async (req, res) => {
   }
 };
 
+// Update password controller
+const updatePassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+
+  // Set new password directly; pre-save hook will hash it
+  user.password = newPassword;
+  await user.save();
+
+    res.status(200).json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Update password error:', err);
+    res.status(500).json({ message: 'Failed to update password', error: err.message });
+  }
+};
+
 // ✅ Export all functions correctly
 module.exports = {
   signup,
   login,
-  deleteAccount
+  deleteAccount,
+  updatePassword
 };

@@ -28,7 +28,7 @@ exports.getCart = async (req, res) => {
         name: product ? product.name : '',
         price: product ? product.price : 0,
         quantity: item.quantity,
-        image: product ? (product.image ? baseUrl + product.image : '') : ''
+        image: product ? (product.image || '') : ''
       };
     });
     res.json(items);
